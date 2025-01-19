@@ -1,0 +1,35 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../v5.3.2/esp-idf"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"holocubic_app.h": "c",
+			"esp_chip_info.h": "c",
+			"esp_system.h": "c",
+			"app_main.h": "c",
+			"cstdint": "cpp",
+			"spi_master.h": "c",
+			"lcd_st7789.h": "c",
+			"spi_hal.h": "c",
+			"ik_spi_hal.h": "c",
+			"stdint.h": "c",
+			"holocubic_app_main.h": "c",
+			"gpio.h": "c",
+			"freertos.h": "c",
+			"array": "c",
+			"string": "c",
+			"string_view": "c",
+			"ranges": "c",
+			"span": "c",
+			"esp_flash.h": "c",
+			"sdkconfig.h": "c",
+			"esp_log.h": "c"
+		}
+	}
+}
