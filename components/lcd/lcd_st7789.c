@@ -93,7 +93,7 @@ static int lcd_st7789_write_data( uint8_t *data, uint32_t size )
 		}
 		else
 		{
-			ik_spi0.transfer( data + pos, total_size, NULL, 0 );
+			ret = ik_spi0.transfer( data + pos, total_size, NULL, 0 );
 			if( ret != 0 )
 			{
 				break;
@@ -112,7 +112,7 @@ static int lcd_st7789_write_one_data( uint8_t data )
 	return lcd_st7789_write_data( tx_buf, 1 );
 }
 
-static void lcd_st7789_set_address_window(uint16_t x_start, uint16_t x_end, uint16_t y_start, uint16_t y_end) 
+static void lcd_st7789_set_window(uint16_t x_start, uint16_t x_end, uint16_t y_start, uint16_t y_end) 
 {
 	uint8_t data[4] = {0};
 
@@ -122,10 +122,11 @@ static void lcd_st7789_set_address_window(uint16_t x_start, uint16_t x_end, uint
 	data[1] = x_start & 0xFF;
 	data[2] = ( x_end >> 8 ) & 0xFF;
 	data[3] = x_end & 0xFF;
-	lcd_st7789_write_one_data(data[0]);
-	lcd_st7789_write_one_data(data[1]);
-	lcd_st7789_write_one_data(data[2]);
-	lcd_st7789_write_one_data(data[3]);
+	// lcd_st7789_write_one_data(data[0]);
+	// lcd_st7789_write_one_data(data[1]);
+	// lcd_st7789_write_one_data(data[2]);
+	// lcd_st7789_write_one_data(data[3]);
+	lcd_st7789_write_data( data, 4 );
 
     // 设置行地址
 	lcd_st7789_write_cmd(ST7789_RASET);
@@ -133,10 +134,11 @@ static void lcd_st7789_set_address_window(uint16_t x_start, uint16_t x_end, uint
 	data[1] = y_start & 0xFF;
 	data[2] = ( y_end >> 8 ) & 0xFF;
 	data[3] = y_end & 0xFF;
-	lcd_st7789_write_one_data(data[0]);
-	lcd_st7789_write_one_data(data[1]);
-	lcd_st7789_write_one_data(data[2]);
-	lcd_st7789_write_one_data(data[3]);
+	// lcd_st7789_write_one_data(data[0]);
+	// lcd_st7789_write_one_data(data[1]);
+	// lcd_st7789_write_one_data(data[2]);
+	// lcd_st7789_write_one_data(data[3]);
+	lcd_st7789_write_data( data, 4 );
 }
 
 /**
@@ -148,7 +150,7 @@ static void lcd_st7789_fill_screen(uint16_t color)
 {
 	uint32_t y = 0;
     // 设置全屏显示区域
-    lcd_st7789_set_address_window(0, ST7789_WIDTH - 1, 0, ST7789_HEIGHT - 1);
+    lcd_st7789_set_window(0, ST7789_WIDTH - 1, 0, ST7789_HEIGHT - 1);
 
 	for( y = 0; y < ( ST7789_HEIGHT * ST7789_WIDTH ); y++ )
 	{
@@ -327,6 +329,182 @@ static int lcd_st7789_deinit( void )
 	return 0;
 }
 
+static int lcd_st7789_draw_pixel( uint16_t x, uint16_t y, uint16_t color )
+{
+	uint8_t data[2] = {0};
+
+	if( ( x > ST7789_WIDTH ) || ( y > ST7789_HEIGHT ) )
+	{
+		return -1;
+	}
+
+	lcd_st7789_set_window( x, x, y, y );
+	// 启动内存写入
+	lcd_st7789_write_cmd(ST7789_RAMWR);
+	data[0] = ( color >> 8 ) & 0xff;
+	data[1] = color & 0xff;
+    // 填充像素
+	lcd_st7789_write_data( data, 2 );
+	return 0;
+}
+
+static int lcd_st7789_draw_line( uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color )
+{
+	int i;
+	int dx,dy;
+	int sx,sy;
+	int E;
+
+	if( ( x0 > ST7789_WIDTH ) || ( y0 > ST7789_HEIGHT ) || ( x1 > ST7789_WIDTH ) || ( y1 > ST7789_HEIGHT ) )
+	{
+		return -1;
+	}
+
+	/* distance between two points */
+	dx = ( x1 > x0 ) ? x1 - x0 : x0 - x1;
+	dy = ( y1 > y0 ) ? y1 - y0 : y0 - y1;
+
+	/* direction of two point */
+	sx = ( x1 > x0 ) ? 1 : -1;
+	sy = ( y1 > y0 ) ? 1 : -1;
+
+	if ( dx > dy ) 	/* inclination < 1 */
+	{
+		// 斜率<1的情况
+		E = -dx;
+		for ( i = 0 ; i <= dx ; i++ ) 
+		{
+			lcd_st7789_draw_pixel( x0, y0, color);
+			x0 += sx;
+			E += 2 * dy;
+			if ( E >= 0 ) 
+			{
+				y0 += sy;
+				E -= 2 * dx;
+			}
+		}
+	} 
+	else /* inclination >= 1 */
+	{
+		// 斜率 > 1的情况，将斜率<1的情况x,y坐标对调即可变换
+		E = -dy;
+		for ( i = 0 ; i <= dy ; i++ ) 
+		{
+			lcd_st7789_draw_pixel( x0, y0, color);
+			y0 += sy;
+			E += 2 * dx;
+			if ( E >= 0 ) 
+			{
+				x0 += sx;
+				E -= 2 * dy;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int lcd_st7789_draw_rectangle( uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color )
+{
+	if( ( x0 >= ST7789_WIDTH ) || ( x1 >= ST7789_WIDTH ) || ( y0 >= ST7789_HEIGHT ) || ( y1 >= ST7789_HEIGHT ) ||
+		( x0 > x1 ) || ( y0 > y1 ) )
+	{
+		return -1;
+	}
+
+	lcd_st7789_draw_line( x0, y0, x1, y0, color );
+	// ESP_LOGI( "lcd", "rect %u %u %u %u\r\n", x0, y0, x1, y0 );
+	lcd_st7789_draw_line( x1, y0, x1, y1, color );
+	// ESP_LOGI( "lcd", "rect %u %u %u %u\r\n", x1, y0, x1, y1 );
+	lcd_st7789_draw_line( x1, y1, x0, y1, color );
+	// ESP_LOGI( "lcd", "rect %u %u %u %u\r\n", x1, y1, x0, y1 );
+	lcd_st7789_draw_line( x0, y1, x0, y0, color );
+	// ESP_LOGI( "lcd", "rect %u %u %u %u\r\n", x0, y1, x0, y0 );
+	return 0;
+}
+
+static int lcd_st7789_fill_rectangle( uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color )
+{
+	uint16_t y_pos = 0;
+
+	if( ( x0 >= ST7789_WIDTH ) || ( x1 >= ST7789_WIDTH ) || ( y0 >= ST7789_HEIGHT ) || ( y1 >= ST7789_HEIGHT ) ||
+		( x0 > x1 ) || ( y0 > y1 ) )
+	{
+		return -1;
+	}
+
+	for( y_pos = y0; y_pos <= y1; y_pos++ )
+	{
+		st7789.draw_line( x0, y_pos, x1, y_pos, color );
+	}
+
+	return 0;
+}
+
+static int lcd_st7789_draw_circle( uint16_t x0, uint16_t y0, uint16_t r, uint16_t color )
+{
+	int x = 0;
+    int y = r;
+    int d = 1 - r;
+
+	if( ( x0 >= ST7789_WIDTH ) || ( y0 >= ST7789_HEIGHT ) )
+	{
+		return -1;
+	}
+
+    while (x <= y) {
+        // 绘制八个对称点
+        lcd_st7789_draw_pixel(x0 + x, y0 + y, color);
+        lcd_st7789_draw_pixel(x0 + y, y0 + x, color);
+        lcd_st7789_draw_pixel(x0 - x, y0 + y, color);
+        lcd_st7789_draw_pixel(x0 - y, y0 + x, color);
+        lcd_st7789_draw_pixel(x0 + x, y0 - y, color);
+        lcd_st7789_draw_pixel(x0 + y, y0 - x, color);
+        lcd_st7789_draw_pixel(x0 - x, y0 - y, color);
+        lcd_st7789_draw_pixel(x0 - y, y0 - x, color);
+
+        if (d < 0) {
+            d += 2 * x + 3;
+        } else {
+            d += 2 * (x - y) + 5;
+            y--;
+        }
+        x++;
+    }
+
+	return 0;
+}
+
+static int lcd_st7789_fill_circle( uint16_t x0, uint16_t y0, uint16_t r, uint16_t color )
+{
+    int x = 0;
+    int y = r;
+    int d = 1 - r;
+
+	if( ( x0 >= ST7789_WIDTH ) || ( y0 >= ST7789_HEIGHT ) )
+	{
+		return -1;
+	}
+
+    while (x <= y) {
+        // 绘制水平线填充圆内的区域
+        lcd_st7789_draw_line(x0 - x, y0 + y, x0 + x, y0 + y, color);
+        lcd_st7789_draw_line(x0 - x, y0 - y, x0 + x, y0 - y, color);
+        lcd_st7789_draw_line(x0 - y, y0 + x, x0 + y, y0 + x, color);
+        lcd_st7789_draw_line(x0 - y, y0 - x, x0 + y, y0 - x, color);
+
+        if (d < 0) {
+            d += 2 * x + 3;
+        } else {
+            d += 2 * (x - y) + 5;
+            y--;
+        }
+        x++;
+    }
+
+	return 0;
+}
+
 LCD_ST7789_STRUCT st7789 = {
     .write_cmd = lcd_st7789_write_cmd,
     .write_data = lcd_st7789_write_data,
@@ -334,4 +512,9 @@ LCD_ST7789_STRUCT st7789 = {
     .deinit = lcd_st7789_deinit,
     .reset = lcd_st7789_reset,
 	.fill_screen = lcd_st7789_fill_screen,
+	.draw_line = lcd_st7789_draw_line,
+	.draw_rectangle = lcd_st7789_draw_rectangle,
+	.fill_rectangle = lcd_st7789_fill_rectangle,
+	.draw_circle = lcd_st7789_draw_circle,
+	.fill_circle = lcd_st7789_fill_circle,
 };

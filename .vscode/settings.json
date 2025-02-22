@@ -1,0 +1,15 @@
+{
+    "C_Cpp.intelliSenseEngine": "default",
+    "idf.espIdfPathWin": "g:\\My_Work\\esp\\v5.3.2\\esp-idf",
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ],
+    "idf.toolsPathWin": "g:\\My_Work\\esp\\.espressif",
+    "idf.flashType": "JTAG",
+    "files.associations": {
+        "holocubic_app.h": "c",
+        "esp_chip_info.h": "c",
+        "esp_system.h": "c"
+    },
+    "idf.portWin": "COM3"
+}

@@ -23,6 +23,12 @@ typedef struct
     int (*deinit)( void );
     void (*reset)( void );
     void (*fill_screen)( uint16_t color );
+    int (*draw_pixel)( uint16_t x, uint16_t y, uint16_t color );
+    int (*draw_line)( uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color );
+    int (*draw_rectangle)( uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color );
+    int (*fill_rectangle)( uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color );
+    int (*draw_circle)( uint16_t x0, uint16_t y0, uint16_t r, uint16_t color );
+    int (*fill_circle)( uint16_t x0, uint16_t y0, uint16_t r, uint16_t color );
 } LCD_ST7789_STRUCT;
 
 extern LCD_ST7789_STRUCT st7789;
