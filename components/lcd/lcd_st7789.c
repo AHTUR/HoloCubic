@@ -3,6 +3,7 @@
 #include "ik_spi_hal.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "ik_heap.h"
 
 // Freertos
 #include "freertos/FreeRTOS.h"
@@ -11,9 +12,6 @@
 #define LCD_ST7789_DC_PIN       40
 #define LCD_ST7789_BCK_PIN      46
 #define LCD_ST7789_RES_PIN      45
-
-#define ST7789_WIDTH  240  // 屏幕宽度
-#define ST7789_HEIGHT 240  // 屏幕高度
 
 // ST7789 命令定义
 #define ST7789_RESET 0X01
@@ -167,43 +165,43 @@ static void lcd_st7789_fill_screen(uint16_t color)
 	return;
 }
 
-static int lcd_st7789_cfg_0( void )
-{
-    lcd_st7789_bck_open();
-    lcd_st7789_delay_ms(100);
+// static int lcd_st7789_cfg_0( void )
+// {
+//     lcd_st7789_bck_open();
+//     lcd_st7789_delay_ms(100);
 
-	lcd_st7789_write_cmd(0x11);	//Sleep Out
-	lcd_st7789_delay_ms(255);
+// 	lcd_st7789_write_cmd(0x11);	//Sleep Out
+// 	lcd_st7789_delay_ms(255);
 	
-	lcd_st7789_write_cmd(0x3A);	//Interface Pixel Format
-	lcd_st7789_write_one_data(0x55);
-	lcd_st7789_delay_ms(10);
+// 	lcd_st7789_write_cmd(0x3A);	//Interface Pixel Format
+// 	lcd_st7789_write_one_data(0x55);
+// 	lcd_st7789_delay_ms(10);
 	
-	lcd_st7789_write_cmd(0x36);	//Memory Data Access Control
-	lcd_st7789_write_one_data(0x00);
+// 	lcd_st7789_write_cmd(0x36);	//Memory Data Access Control
+// 	lcd_st7789_write_one_data(0x00);
 
-	lcd_st7789_write_cmd(0x2A);	//Column Address Set
-	lcd_st7789_write_one_data(0x00);
-	lcd_st7789_write_one_data(0x00);
-	lcd_st7789_write_one_data(0x00);
-	lcd_st7789_write_one_data(0xF0);
+// 	lcd_st7789_write_cmd(0x2A);	//Column Address Set
+// 	lcd_st7789_write_one_data(0x00);
+// 	lcd_st7789_write_one_data(0x00);
+// 	lcd_st7789_write_one_data(0x00);
+// 	lcd_st7789_write_one_data(0xF0);
 
-	lcd_st7789_write_cmd(0x2B);	//Row Address Set
-	lcd_st7789_write_one_data(0x00);
-	lcd_st7789_write_one_data(0x00);
-	lcd_st7789_write_one_data(0x00);
-	lcd_st7789_write_one_data(0xF0);
+// 	lcd_st7789_write_cmd(0x2B);	//Row Address Set
+// 	lcd_st7789_write_one_data(0x00);
+// 	lcd_st7789_write_one_data(0x00);
+// 	lcd_st7789_write_one_data(0x00);
+// 	lcd_st7789_write_one_data(0xF0);
 
-	lcd_st7789_write_cmd(0x21);	//Display Inversion On
-	lcd_st7789_delay_ms(10);
+// 	lcd_st7789_write_cmd(0x21);	//Display Inversion On
+// 	lcd_st7789_delay_ms(10);
 
-	lcd_st7789_write_cmd(0x13);	//Normal Display Mode On
-	lcd_st7789_delay_ms(10);
+// 	lcd_st7789_write_cmd(0x13);	//Normal Display Mode On
+// 	lcd_st7789_delay_ms(10);
 
-	lcd_st7789_write_cmd(0x29);	//Display ON
-	lcd_st7789_delay_ms(10);
-	return 0;
-}
+// 	lcd_st7789_write_cmd(0x29);	//Display ON
+// 	lcd_st7789_delay_ms(10);
+// 	return 0;
+// }
 
 static int lcd_st7789_cfg_1( void )
 {
@@ -303,7 +301,7 @@ static int lcd_st7789_init( void )
 		return -1;
 	}
 
-	frame_buf = malloc( ST7789_HEIGHT * ST7789_WIDTH * 2 );
+	frame_buf = IK_MALLOC( ST7789_HEIGHT * ST7789_WIDTH * 2 );
 	if( frame_buf == NULL )
 	{
 		ESP_LOGI( "lcd", "lcd frame buf malloc fail\r\n" );
@@ -323,13 +321,14 @@ static int lcd_st7789_init( void )
 static int lcd_st7789_deinit( void )
 {
     lcd_st7789_reset();
-	free( frame_buf );
+	lcd_st7789_bck_close();
+	ik_heap.free( frame_buf );
 	frame_buf = NULL;
 	ik_spi0.close();
 	return 0;
 }
 
-static int lcd_st7789_draw_pixel( uint16_t x, uint16_t y, uint16_t color )
+int lcd_st7789_draw_pixel( uint16_t x, uint16_t y, uint16_t color )
 {
 	uint8_t data[2] = {0};
 
@@ -345,6 +344,41 @@ static int lcd_st7789_draw_pixel( uint16_t x, uint16_t y, uint16_t color )
 	data[1] = color & 0xff;
     // 填充像素
 	lcd_st7789_write_data( data, 2 );
+	return 0;
+}
+
+int lcd_st7789_draw_multi_pixel( uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1, uint16_t *colors )
+{
+	uint32_t size = 0, i = 0, index = 0;;
+
+	if( ( x0 > x1 ) || ( y0 > y1 ) )
+	{
+		return -1;
+	}
+
+	if( ( x1 - x0 + 1 ) > ST7789_WIDTH )
+	{
+		return -2;
+	}
+
+	if( ( y1 - y0 + 1 ) > ST7789_HEIGHT )
+	{
+		return -3;
+	}
+
+	size = ( x1 - x0 + 1 ) * ( y1 - y0 + 1 );
+	for( i = 0; i < size; i++ )
+	{
+		frame_buf[index++] = ( *colors >> 8 ) & 0xff;
+		frame_buf[index++] = ( *colors ) & 0xff;
+		colors++;
+	}
+
+	lcd_st7789_set_window( x0, x1, y0, y1 );
+	// 启动内存写入
+	lcd_st7789_write_cmd(ST7789_RAMWR);
+    // 填充像素
+	lcd_st7789_write_data( frame_buf, size*2 );
 	return 0;
 }
 
@@ -512,6 +546,8 @@ LCD_ST7789_STRUCT st7789 = {
     .deinit = lcd_st7789_deinit,
     .reset = lcd_st7789_reset,
 	.fill_screen = lcd_st7789_fill_screen,
+	.draw_pixel = lcd_st7789_draw_pixel,
+	.draw_multi_pixel = lcd_st7789_draw_multi_pixel,
 	.draw_line = lcd_st7789_draw_line,
 	.draw_rectangle = lcd_st7789_draw_rectangle,
 	.fill_rectangle = lcd_st7789_fill_rectangle,

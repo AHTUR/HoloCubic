@@ -7,15 +7,17 @@
 
 // ESP32 platform
 #include "sdkconfig.h"
-#include "esp_chip_info.h"
-#include "esp_system.h"
-#include "esp_flash.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
 // IK_BSP
 #include "ik_spi_hal.h"
+
+// IK_LIB
+#include "ik_heap.h"
+#include "ik_tim.h"
+#include "ik_lv_port.h"
 
 // LCD
 #include "lcd_st7789.h"
