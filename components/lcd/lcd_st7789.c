@@ -212,7 +212,8 @@ static int lcd_st7789_cfg_1( void )
 	lcd_st7789_delay_ms(255);     
 
 	lcd_st7789_write_cmd(0x36);
-	lcd_st7789_write_one_data(0x00);
+	// lcd_st7789_write_one_data(0x00);
+	lcd_st7789_write_one_data(0x40);
 
 	lcd_st7789_write_cmd(0x3A); 
 	lcd_st7789_write_one_data(0x55);

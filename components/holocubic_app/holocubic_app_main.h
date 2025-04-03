@@ -13,14 +13,19 @@
 
 // IK_BSP
 #include "ik_spi_hal.h"
+#include "ik_iic_hal.h"
 
 // IK_LIB
 #include "ik_heap.h"
 #include "ik_tim.h"
 #include "ik_lv_port.h"
+#include "ik_mahony_filter.h"
 
 // LCD
 #include "lcd_st7789.h"
+
+// imu
+#include "qmi8658.h"
 
 void holocubic_main( void );
 

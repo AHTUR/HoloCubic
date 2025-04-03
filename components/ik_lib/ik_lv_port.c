@@ -3,16 +3,16 @@
 #include "ik_heap.h"
 #include "ik_tim.h"
 #include "lvgl.h"
-#include "lv_examples.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 
 // LVGL param
 #define BYTE_PER_PIXEL (LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB565)) /*will be 2 for RGB565 */
-#define LV_SCREEN_SIZE  ST7789_WIDTH * ST7789_HEIGHT / 10 * BYTE_PER_PIXEL
+#define LV_SCREEN_SIZE  ST7789_WIDTH * ST7789_HEIGHT * BYTE_PER_PIXEL
 static lv_display_t *display = NULL;
 static uint8_t *lv_screen_buf = NULL;
+static uint8_t *lv_screen_buf_2 = NULL;
 
 static uint32_t tick_ms_get(void)
 {
@@ -27,8 +27,6 @@ static void my_disp_flush(lv_display_t * disp, const lv_area_t * area, lv_color_
 
 static void lvgl_loop( void *arg )
 {
-    lv_example_get_started_1();
-
     while(1)
     {
         lv_timer_handler();
@@ -44,15 +42,24 @@ void ik_lv_init( void )
     lv_tick_set_cb( tick_ms_get );
     display = lv_display_create(ST7789_WIDTH, ST7789_HEIGHT);
 
-    /*Declare a buffer for 1/10 screen size*/
+    /*Declare a buffer for screen size*/
     lv_screen_buf = IK_MALLOC( LV_SCREEN_SIZE );
-    if( lv_screen_buf != NULL )
+    if( lv_screen_buf == NULL )
     {
-        lv_display_set_buffers(display, lv_screen_buf, NULL, LV_SCREEN_SIZE, LV_DISPLAY_RENDER_MODE_PARTIAL);  /*Initialize the display buffer.*/
-        lv_display_set_flush_cb(display, my_disp_flush);
-        if( xTaskCreatePinnedToCore( lvgl_loop, "lvgl_loop", 1024*30, NULL, 1, NULL, 0 ) == pdTRUE )
-        {
-            // ESP_LOGI( "lvgl", "lvgl task start\r\n" );
-        }
+        return;
+    }
+
+    lv_screen_buf_2 = IK_MALLOC( LV_SCREEN_SIZE );
+    if( lv_screen_buf_2 == NULL )
+    {
+        IK_FREE( lv_screen_buf );
+        return;
+    }
+
+    lv_display_set_buffers(display, lv_screen_buf, lv_screen_buf_2, LV_SCREEN_SIZE, LV_DISPLAY_RENDER_MODE_DIRECT);  /*Initialize the display buffer.*/
+    lv_display_set_flush_cb(display, my_disp_flush);
+    if( xTaskCreatePinnedToCore( lvgl_loop, "lvgl_loop", 1024*30, NULL, 1, NULL, 0 ) == pdTRUE )
+    {
+        // ESP_LOGI( "lvgl", "lvgl task start\r\n" );
     }
 }

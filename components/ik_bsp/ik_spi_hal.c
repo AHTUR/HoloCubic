@@ -50,7 +50,7 @@ static int spi_close( void )
     return 0;
 }
 
-static int spi_transfer( uint8_t *tx_buf, uint16_t tx_len, uint8_t *rx_buf, uint16_t rx_len  )
+static int spi_transfer( uint8_t *tx_buf, uint32_t tx_len, uint8_t *rx_buf, uint32_t rx_len  )
 {
     spi_transaction_t data = {0};
     data.tx_buffer = tx_buf;
