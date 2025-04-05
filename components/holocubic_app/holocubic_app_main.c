@@ -40,7 +40,7 @@ void holocubic_main( void )
     st7789.init();
     ik_lv_init();
     ik_iic.open();
-
+    ik_fs_mount();
     vTaskDelay(100);
     if( qmi8658_init() == 1 )
     {

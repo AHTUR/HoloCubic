@@ -27,6 +27,9 @@
 // imu
 #include "qmi8658.h"
 
+// file system
+#include "ik_fs_port.h"
+
 void holocubic_main( void );
 
 #endif

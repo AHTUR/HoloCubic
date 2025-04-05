@@ -3,6 +3,7 @@
 #include "ik_heap.h"
 #include "ik_tim.h"
 #include "lvgl.h"
+#include "lv_examples.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -27,6 +28,7 @@ static void my_disp_flush(lv_display_t * disp, const lv_area_t * area, lv_color_
 
 static void lvgl_loop( void *arg )
 {
+    lv_example_get_started_1();
     while(1)
     {
         lv_timer_handler();
